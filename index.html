@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Следы Великой Отечественной войны на карте Алматы (1941–1945)</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg-main: #0D1117;
+    --bg-card: #171C22;
+    --color-cream: #C7B99A;
+    --color-red: #C83D32;
+    --color-white: #F1EFE8;
+    --color-gray: #8C9298;
+    --border-color: rgba(199, 185, 154, 0.2);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+    background-color: var(--bg-main);
+    color: var(--color-white);
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+    line-height: 1.6;
+}
+
+.archive-stamp, .coords, .stat-number {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* ===== ПРОГРЕСС-БАР СКРОЛЛА ===== */
+.scroll-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    background: linear-gradient(90deg, var(--color-red), #ff6b5e);
+    z-index: 2000;
+    box-shadow: 0 0 10px var(--color-red);
+    transition: width 0.1s;
+}
+
+/* ===== АНИМАЦИИ ПОЯВЛЕНИЯ ===== */
+.reveal {
+    opacity: 0;
+    transform: translateY(50px);
+    transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.reveal-left {
+    opacity: 0;
+    transform: translateX(-60px);
+    transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal-right {
+    opacity: 0;
+    transform: translateX(60px);
+    transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal-left.active, .reveal-right.active {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.reveal-zoom {
+    opacity: 0;
+    transform: scale(0.85);
+    transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal-zoom.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.stagger-item {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stagger-item.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.fade-content { animation: fadeIn 0.4s ease-in-out; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== ШАПКА ===== */
+header {
+    position: fixed;
+    top: 0; left: 0; width: 100%;
+    background: rgba(13, 17, 23, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    animation: slideDown 0.8s ease-out;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.logo {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-cream);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    position: relative;
+}
+
+.logo::before {
+    content: '★';
+    color: var(--color-red);
+    margin-right: 8px;
+    display: inline-block;
+    animation: starPulse 2s infinite;
+}
+
+@keyframes starPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+}
+
+nav ul {
+    display: flex;
+    list-style: none;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+}
+
+nav a {
+    color: var(--color-gray);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: color 0.3s;
+    position: relative;
+}
+
+nav a::after {
+    content: '';
+    position: absolute;
+    width: 0; height: 1px;
+    bottom: -3px; left: 0;
+    background-color: var(--color-red);
+    transition: width 0.3s ease;
+}
+
+nav a:hover { color: var(--color-cream); }
+nav a:hover::after { width: 100%; }
+
+/* ===== БЕГУЩАЯ СТРОКА ===== */
+.ticker {
+    position: fixed;
+    top: 62px;
+    left: 0;
+    width: 100%;
+    background: rgba(200, 61, 50, 0.95);
+    color: var(--color-white);
+    overflow: hidden;
+    white-space: nowrap;
+    z-index: 999;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    padding: 4px 0;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.ticker-content {
+    display: inline-block;
+    animation: tickerMove 30s linear infinite;
+    padding-left: 100%;
+}
+
+@keyframes tickerMove {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+}
+
+/* ===== HERO ===== */
+.hero {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 0 1.5rem;
+    position: relative;
+    background: 
+        linear-gradient(rgba(13,17,23,0.75), rgba(13,17,23,0.92)), 
+        url('https://images.unsplash.com/photo-1596017478576-c7b29e525a30?auto=format&fit=crop&w=1920&q=80') center/cover fixed;
+    overflow: hidden;
+}
+
+.particles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.particle {
+    position: absolute;
+    top: -10px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    animation: fall linear infinite;
+}
+
+@keyframes fall {
+    to {
+        transform: translateY(110vh);
+        opacity: 0;
+    }
+}
+
+.hero-content { 
+    animation: heroFadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    position: relative;
+    z-index: 2;
+}
+
+@keyframes heroFadeIn {
+    from { opacity: 0; transform: translateY(30px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.hero-year {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--color-red);
+    letter-spacing: 6px;
+    margin-bottom: 1rem;
+    opacity: 0;
+    animation: typeIn 1s 0.3s forwards;
+}
+
+@keyframes typeIn {
+    from { opacity: 0; letter-spacing: 15px; }
+    to { opacity: 1; letter-spacing: 6px; }
+}
+
+.hero h1 {
+    font-size: 3.5rem;
+    color: var(--color-white);
+    margin-bottom: 1rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1.1;
+}
+
+.hero h1 span {
+    color: var(--color-red);
+    display: inline-block;
+    text-shadow: 0 0 30px rgba(200, 61, 50, 0.4);
+    animation: glowText 3s ease-in-out infinite;
+}
+
+@keyframes glowText {
+    0%, 100% { text-shadow: 0 0 20px rgba(200, 61, 50, 0.3); }
+    50% { text-shadow: 0 0 40px rgba(200, 61, 50, 0.8), 0 0 60px rgba(200, 61, 50, 0.4); }
+}
+
+.typewriter {
+    font-size: 1.15rem;
+    color: var(--color-gray);
+    max-width: 700px;
+    margin: 0 auto 2.5rem;
+    min-height: 3.2rem;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.6;
+}
+
+.typewriter::after {
+    content: '▊';
+    color: var(--color-red);
+    animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+.btn {
+    background-color: var(--color-red);
+    color: var(--color-white);
+    padding: 0.9rem 2.2rem;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 20px rgba(200, 61, 50, 0.3);
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    animation: btnAppear 0.8s 2.5s forwards;
+}
+
+@keyframes btnAppear {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.btn:hover {
+    background-color: #a53026;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 25px rgba(200, 61, 50, 0.6);
+}
+
+.scroll-hint {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--color-cream);
+    font-size: 1.5rem;
+    animation: bounceDown 2s infinite;
+    z-index: 2;
+    text-decoration: none;
+}
+
+@keyframes bounceDown {
+    0%, 100% { transform: translate(-50%, 0); opacity: 1; }
+    50% { transform: translate(-50%, 15px); opacity: 0.5; }
+}
+
+/* ===== СЕКЦИИ ===== */
+section {
+    padding: 5rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.section-title {
+    font-size: 2.4rem;
+    margin-bottom: 0.8rem;
+    color: var(--color-cream);
+    font-weight: 700;
+    position: relative;
+    display: inline-block;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 0;
+    height: 3px;
+    background: var(--color-red);
+    transition: width 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s;
+}
+
+.reveal.active .section-title::after,
+.reveal-left.active .section-title::after {
+    width: 80px;
+}
+
+.section-desc {
+    color: var(--color-gray);
+    margin-bottom: 2.5rem;
+    font-size: 1.05rem;
+}
+
+.archive-stamp {
+    display: inline-block;
+    border: 2px solid var(--color-red);
+    color: var(--color-red);
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    letter-spacing: 2px;
+    transform: rotate(-1.5deg);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover .archive-stamp {
+    transform: rotate(0deg) scale(1.05);
+    box-shadow: 0 0 15px rgba(200, 61, 50, 0.4);
+}
+
+/* ===== КАРТА (ВАШЕ ИЗОБРАЖЕНИЕ) ===== */
+.map-filters {
+    display: flex;
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    background: var(--bg-card);
+    color: var(--color-gray);
+    border: 1px solid var(--border-color);
+    padding: 0.6rem 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.85rem;
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+}
+
+.filter-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.filter-btn:hover::before {
+    left: 100%;
+}
+
+.filter-btn.active, .filter-btn:hover {
+    background: var(--color-cream);
+    color: var(--bg-main);
+    border-color: var(--color-cream);
+    font-weight: 700;
+    transform: translateY(-2px);
+}
+
+/* ★★★ ВАША КАРТА ВСТАВЛЕНА СЮДА ★★★ */
+.map-container {
+    position: relative;
+    width: 100%;
+    height: 550px;
+    background-color: #121820;
+    background-image: 
+        linear-gradient(rgba(13, 17, 23, 0.4), rgba(13, 17, 23, 0.4)),
+        url("img/WhatsApp Image 2026-10-08 at 8.36.40 PM.jpeg");
+    background-size: cover;
+    background-position: center;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.map-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: 
+        linear-gradient(rgba(199, 185, 154, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(199, 185, 154, 0.1) 1px, transparent 1px);
+    background-size: 45px 45px;
+    pointer-events: none;
+    z-index: 1;
+    animation: gridMove 20s linear infinite;
+}
+
+@keyframes gridMove {
+    from { background-position: 0 0, 0 0; }
+    to { background-position: 45px 45px, 45px 45px; }
+}
+
+.map-container::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 600px;
+    height: 600px;
+    background: conic-gradient(from 0deg, transparent 0deg, rgba(200, 61, 50, 0.15) 30deg, transparent 60deg);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: radar 8s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+}
+
+@keyframes radar {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.map-bg-grid-text {
+    position: absolute;
+    font-size: 7rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.08);
+    text-transform: uppercase;
+    user-select: none;
+    letter-spacing: 8px;
+    text-align: center;
+    z-index: 1;
+    pointer-events: none;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+    animation: textBreathe 6s ease-in-out infinite;
+}
+
+@keyframes textBreathe {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+.map-point {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
+    box-shadow: 0 0 12px rgba(0,0,0,0.9);
+    z-index: 10;
+    animation: pointAppear 0.8s backwards;
+}
+
+.map-point:nth-child(2) { animation-delay: 0.2s; }
+.map-point:nth-child(3) { animation-delay: 0.4s; }
+.map-point:nth-child(4) { animation-delay: 0.6s; }
+.map-point:nth-child(5) { animation-delay: 0.8s; }
+.map-point:nth-child(6) { animation-delay: 1s; }
+.map-point:nth-child(7) { animation-delay: 1.2s; }
+
+@keyframes pointAppear {
+    from { transform: translate(-50%, -50%) scale(0); }
+    to { transform: translate(-50%, -50%) scale(1); }
+}
+
+.map-point::after {
+    content: '';
+    position: absolute;
+    top: -6px; left: -6px; right: -6px; bottom: -6px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(2.4); opacity: 0; }
+}
+
+.point-enterprise { background: var(--color-red); color: var(--color-red); }
+.point-hospital { background: #3b82f6; color: #3b82f6; }
+.point-person { background: #eab308; color: #eab308; }
+.point-memorial { background: #ffffff; color: #ffffff; }
+
+.map-point:hover {
+    transform: translate(-50%, -50%) scale(1.6);
+    z-index: 20;
+    box-shadow: 0 0 20px currentColor;
+}
+
+.investigation-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 2.5rem;
+    margin-top: 1.5rem;
+    transition: border-color 0.3s;
+}
+
+.investigation-card.flash {
+    animation: cardFlash 0.6s;
+}
+
+@keyframes cardFlash {
+    0% { border-color: var(--color-red); box-shadow: 0 0 30px rgba(200, 61, 50, 0.4); }
+    100% { border-color: var(--border-color); box-shadow: none; }
+}
+
+.coords {
+    font-size: 0.85rem;
+    color: var(--color-cream);
+    margin-bottom: 1rem;
+}
+
+.investigation-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    align-items: center;
+}
+
+@media(max-width: 768px) {
+    .investigation-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 2.2rem; }
+    nav ul { display: none; }
+    .map-bg-grid-text { font-size: 3rem; }
+}
+
+.investigation-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    filter: grayscale(80%) contrast(120%);
+    border: 1px solid var(--border-color);
+    transition: filter 0.4s, transform 0.4s;
+}
+
+.investigation-img:hover {
+    filter: grayscale(20%) contrast(100%);
+    transform: scale(1.03);
+}
+
+/* ===== ТАЙМЛАЙН ===== */
+.timeline-bar {
+    display: flex;
+    justify-content: space-between;
+    margin: 2rem 0;
+    position: relative;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.timeline-bar::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0; width: 100%; height: 2px;
+    background: var(--border-color);
+    z-index: 1;
+}
+
+.year-node {
+    position: relative;
+    z-index: 2;
+    background: var(--bg-main);
+    border: 2px solid var(--border-color);
+    padding: 0.6rem 1.2rem;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: var(--color-gray);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.year-node.active, .year-node:hover {
+    border-color: var(--color-red);
+    color: var(--color-cream);
+    background: var(--bg-card);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(200, 61, 50, 0.3);
+}
+
+/* ===== МАРШРУТ ===== */
+.route-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 2.5rem;
+}
+
+.route-steps-indicator {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--color-gray);
+    flex-wrap: wrap;
+}
+
+.route-steps-indicator span {
+    transition: all 0.3s;
+}
+
+.route-steps-indicator span.active-step {
+    color: var(--color-cream);
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-color: var(--color-red);
+    text-underline-offset: 5px;
+}
+
+.route-controls {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+/* ===== КАРТОЧКИ С 3D-НАКЛОНОМ ===== */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 1.8rem;
+    transition: transform 0.15s ease-out, border-color 0.3s, box-shadow 0.3s;
+    transform-style: preserve-3d;
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-red), transparent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s;
+}
+
+.card:hover::before {
+    transform: scaleX(1);
+}
+
+.card:hover {
+    border-color: var(--color-cream);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(200, 61, 50, 0.1);
+}
+
+.card h3 {
+    color: var(--color-cream);
+    margin-bottom: 0.8rem;
+    font-size: 1.2rem;
+}
+
+.scanlines {
+    position: relative;
+}
+
+.scanlines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+    pointer-events: none;
+    animation: scanMove 8s linear infinite;
+}
+
+@keyframes scanMove {
+    from { background-position: 0 0; }
+    to { background-position: 0 100px; }
+}
+
+/* ===== СЛАЙДЕР ТОГДА/СЕЙЧАС (ВАШИ ФОТО) ===== */
+.comparison-container {
+    position: relative;
+    width: 100%;
+    height: 500px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    user-select: none;
+    border-radius: 4px;
+}
+
+.comparison-img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-size: cover;
+    background-position: center;
+}
+
+/* ★★★ АЛМАТЫ 1940 — ВАШЕ ФОТО "ычсыс" ★★★ */
+.img-then {
+    background-image: url("img/WhatsApp Image 2026-10-08 at 8.41.56 ычсыс.jpeg");
+    filter: grayscale(70%) contrast(115%) sepia(25%);
+}
+
+/* ★★★ АЛМАТЫ 2026 — ВАШЕ ФОТО "8.41.56 PM" ★★★ */
+.img-now {
+    background-image: url("img/WhatsApp Image 2026-10-08 at 8.41.56 PM.jpeg");
+    width: 50%;
+    border-right: 3px solid var(--color-red);
+    z-index: 2;
+    height: 100%;
+    transition: width 0.05s linear;
+}
+
+.comparison-container::after {
+    content: '← 1940 | 2026 →';
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(13, 17, 23, 0.85);
+    color: var(--color-cream);
+    padding: 0.5rem 1.2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 3px;
+    z-index: 6;
+    border: 1px solid var(--color-red);
+    pointer-events: none;
+}
+
+.slider-range {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: ew-resize;
+    z-index: 10;
+    width: 100%;
+    height: 100%;
+}
+
+.slider-handle-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    width: 3px;
+    background: var(--color-red);
+    z-index: 5;
+    pointer-events: none;
+    box-shadow: 0 0 15px var(--color-red);
+}
+
+.slider-knob {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 42px; height: 42px;
+    background: var(--color-red);
+    color: var(--color-white);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    box-shadow: 0 0 15px rgba(200, 61, 50, 0.6);
+    animation: knobPulse 2s infinite;
+}
+
+@keyframes knobPulse {
+    0%, 100% { box-shadow: 0 0 15px rgba(200, 61, 50, 0.6); }
+    50% { box-shadow: 0 0 30px rgba(200, 61, 50, 0.9); }
+}
+
+/* ===== СТАТИСТИКА ===== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    text-align: center;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 2rem 1rem;
+    transition: transform 0.3s, border-color 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(200, 61, 50, 0.1) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.5s;
+}
+
+.stat-card:hover::before {
+    opacity: 1;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    border-color: var(--color-red);
+}
+
+.stat-number {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--color-red);
+    margin-bottom: 0.5rem;
+    text-shadow: 0 0 20px rgba(200, 61, 50, 0.3);
+}
+
+/* ===== ФУТЕР ===== */
+footer {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--color-gray);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.glitch {
+    position: relative;
+    animation: glitchShake 5s infinite;
+}
+
+@keyframes glitchShake {
+    0%, 95%, 100% { transform: none; opacity: 1; }
+    96% { transform: translateX(2px); }
+    97% { transform: translateX(-2px); opacity: 0.8; }
+    98% { transform: translateX(1px); }
+}
+</style>
+</head>
+<body>
+
+<div class="scroll-progress" id="scrollProgress"></div>
+
+<header>
+    <div class="logo">Следы Войны · Алматы 1941–1945</div>
+    <nav>
+        <ul>
+            <li><a href="#map-section">Карта</a></li>
+            <li><a href="#timeline-section">По годам</a></li>
+            <li><a href="#rear">Тыл</a></li>
+            <li><a href="#hospitals">Госпитали</a></li>
+            <li><a href="#route">Маршрут</a></li>
+            <li><a href="#people">Люди</a></li>
+            <li><a href="#comparison">Тогда/Сейчас</a></li>
+            <li><a href="#sources">Источники</a></li>
+        </ul>
+    </nav>
+</header>
+
+<div class="ticker">
+    <div class="ticker-content">
+        ★ СВОДКА СОВИНФОРМБЮРО · 1941: НАЧАЛАСЬ ЭВАКУАЦИЯ ПРОМЫШЛЕННОСТИ НА ВОСТОК ★ АЛМА-АТА ПРИНИМАЕТ ПЕРВЫЕ ЭШЕЛОНЫ ★ 1942: ЗАВОДЫ ВЫШЛИ НА ПОЛНУЮ МОЩНОСТЬ ★ 1943: ФРОНТ ПОЛУЧАЕТ БОЕПРИПАСЫ ИЗ КАЗАХСТАНА ★ 1944: ОСВОБОЖДЕНИЕ ТЕРРИТОРИЙ ★ 1945: ПОБЕДА! ★ ВЕЧНАЯ ПАМЯТЬ ГЕРОЯМ ★
+    </div>
+</div>
+
+<section class="hero">
+    <div class="particles" id="particles"></div>
+    <div class="hero-content">
+        <div class="hero-year">1941 — 1945 · ПОМНИМ</div>
+        <h1>Следы Великой Отечественной<br><span id="glitchTitle">на карте Алматы</span></h1>
+        <p class="typewriter" id="typewriter"></p>
+        <a href="#map-section" class="btn">🗺️ Исследовать карту</a>
+    </div>
+    <a href="#map-section" class="scroll-hint">▼</a>
+</section>
+
+<section id="map-section" class="reveal">
+    <h2 class="section-title">Интерактивная карта памяти</h2>
+    <p class="section-desc">Нажимайте на фильтры и точки на карте, чтобы открыть архивные дела объектов.</p>
+    
+    <div class="map-filters">
+        <button class="filter-btn active" onclick="filterMap('all', this)">ВСЕ ОБЪЕКТЫ</button>
+        <button class="filter-btn" onclick="filterMap('enterprise', this)">🏭 ПРЕДПРИЯТИЯ</button>
+        <button class="filter-btn" onclick="filterMap('hospital', this)">🏥 ГОСПИТАЛИ</button>
+        <button class="filter-btn" onclick="filterMap('person', this)">👤 ЛЮДИ</button>
+        <button class="filter-btn" onclick="filterMap('memorial', this)">🕯️ ПАМЯТНЫЕ МЕСТА</button>
+    </div>
+
+    <div class="map-container" id="mapContainer">
+        <div class="map-bg-grid-text">ALMATY · 1941-1945</div>
+        
+        <div class="map-point point-enterprise" style="top: 35%; left: 40%;" data-category="enterprise" onclick="showPointInfo(1)"></div>
+        <div class="map-point point-hospital" style="top: 55%; left: 60%;" data-category="hospital" onclick="showPointInfo(2)"></div>
+        <div class="map-point point-person" style="top: 45%; left: 50%;" data-category="person" onclick="showPointInfo(3)"></div>
+        <div class="map-point point-memorial" style="top: 70%; left: 30%;" data-category="memorial" onclick="showPointInfo(4)"></div>
+        <div class="map-point point-enterprise" style="top: 25%; left: 70%;" data-category="enterprise" onclick="showPointInfo(5)"></div>
+        <div class="map-point point-hospital" style="top: 65%; left: 45%;" data-category="hospital" onclick="showPointInfo(6)"></div>
+    </div>
+
+    <div class="investigation-card" id="infoCard">
+        <div class="archive-stamp" id="cardStamp">АРХИВ · ОБЪЕКТ №014</div>
+        <div class="coords" id="cardCoords">43.2567° N, 76.9286° E</div>
+        <div class="investigation-grid">
+            <div>
+                <h3 id="cardTitle" style="color: var(--color-cream); font-size: 1.4rem; margin-bottom: 0.8rem;">Выберите объект на карте</h3>
+                <p id="cardDesc" style="color: var(--color-gray); margin-bottom: 1rem;">Нажмите на любую цветную точку выше, чтобы поднять архивные документы и узнать историю места.</p>
+                <p id="cardToday" style="font-size: 0.9rem; color: var(--color-white);"><strong>Сегодня на этом месте:</strong> —</p>
+            </div>
+            <div class="scanlines">
+                <img id="cardImg" src="https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=600&q=80" alt="Архивное фото" class="investigation-img">
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="timeline-section" class="reveal-left">
+    <h2 class="section-title">Алматы по годам войны</h2>
+    <p class="section-desc">Выберите год, чтобы увидеть хронологию событий.</p>
+    
+    <div class="timeline-bar">
+        <div class="year-node active" onclick="setYear(1941, this)">1941 · Начало эвакуации</div>
+        <div class="year-node" onclick="setYear(1942, this)">1942 · Пик тылового роста</div>
+        <div class="year-node" onclick="setYear(1943, this)">1943 · Мощность фронту</div>
+        <div class="year-node" onclick="setYear(1944, this)">1944 · Наука и производство</div>
+        <div class="year-node" onclick="setYear(1945, this)">1945 · Год Победы</div>
+    </div>
+    
+    <div id="yearContent" class="card fade-content" style="margin-top: 1.5rem;">
+        <span class="archive-stamp">ХРОНИКА 1941 ГОДА</span>
+        <h3 style="color: var(--color-cream); margin-bottom: 0.5rem;">Первые эшелоны с Запада</h3>
+        <p style="color: var(--color-gray);">В Алматы прибывают первые эвакуированные заводы, фабрики и тысячи специалистов. Город принимает эвакуированных ленинградцев, москвичей, украинцев.</p>
+    </div>
+</section>
+
+<section id="rear" class="reveal">
+    <h2 class="section-title">Алматы работал для фронта</h2>
+    <p class="section-desc">Ключевые предприятия, переброшенные в глубокий тыл.</p>
+    <div class="cards-grid">
+        <div class="card stagger-item">
+            <span class="archive-stamp">ПРЕДПРИЯТИЕ №1</span>
+            <h3>Алматинский завод им. Кирова</h3>
+            <p style="color: var(--color-gray); font-size: 0.9rem; margin-bottom: 1rem;">Производство торпед, мин и боеприпасов для фронта круглосуточно.</p>
+            <p style="font-size: 0.85rem; color: var(--color-cream);">📍 Район ул. Шевченко / Розыбакиева</p>
+        </div>
+        <div class="card stagger-item">
+            <span class="archive-stamp">ПРЕДПРИЯТИЕ №2</span>
+            <h3>Эвакуированная киностудия (ЦНКС)</h3>
+            <p style="color: var(--color-gray); font-size: 0.9rem; margin-bottom: 1rem;">Объединение Мосфильма и Ленфильма в Алматы под руководством С. Эйзенштейна.</p>
+            <p style="font-size: 0.85rem; color: var(--color-cream);">📍 Здание «Казахфильм»</p>
+        </div>
+        <div class="card stagger-item">
+            <span class="archive-stamp">ПРЕДПРИЯТИЕ №3</span>
+            <h3>Швейная фабрика им. Дзержинского</h3>
+            <p style="color: var(--color-gray); font-size: 0.9rem; margin-bottom: 1rem;">Массовый пошив обмундирования, шинелей и теплых вещей для действующей армии.</p>
+            <p style="font-size: 0.85rem; color: var(--color-cream);">📍 Центр города</p>
+        </div>
+    </div>
+</section>
+
+<section id="hospitals" class="reveal-right">
+    <h2 class="section-title">Города-госпитали Алматы</h2>
+    <p class="section-desc">Школы и общежития, превращенные в спасательные пункты для раненых.</p>
+    <div class="cards-grid">
+        <div class="card stagger-item">
+            <span class="archive-stamp">ГОСПИТАЛЬ №1235</span>
+            <h3>Эвакогоспиталь в здании школы №28</h3>
+            <p style="color: var(--color-gray); font-size: 0.9rem; margin-bottom: 1rem;">Тысячи бойцов вернулись в строй благодаря самоотверженности алматинских врачей.</p>
+            <p style="font-size: 0.85rem; color: var(--color-cream);">📅 1941–1945 гг.</p>
+        </div>
+        <div class="card stagger-item">
+            <span class="archive-stamp">ГОСПИТАЛЬ №2411</span>
+            <h3>Госпиталь в курортной зоне Медеу</h3>
+            <p style="color: var(--color-gray); font-size: 0.9rem; margin-bottom: 1rem;">Горный воздух и минеральные воды использовались для реабилитации тяжелораненых.</p>
+            <p style="font-size: 0.85rem; color: var(--color-cream);">📅 1942–1945 гг.</p>
+        </div>
+    </div>
+</section>
+
+<section id="route" class="reveal">
+    <h2 class="section-title">Маршрут: «Один день военного Алматы»</h2>
+    <p class="section-desc">Пройдите по ключевым точкам исторического дня тылового города.</p>
+    
+    <div class="route-box">
+        <div class="route-steps-indicator">
+            <span id="st1" class="active-step">01. Вокзал</span> / 
+            <span id="st2">02. Госпиталь</span> / 
+            <span id="st3">03. Завод</span> / 
+            <span id="st4">04. Жилой квартал</span> / 
+            <span id="st5">05. Мемориал</span>
+        </div>
+        
+        <div class="fade-content" id="routeContentBlock">
+            <span class="archive-stamp" id="routeStamp">ОСТАНОВКА №1 · ПРИБЫТИЕ</span>
+            <h3 id="routeTitle" style="color: var(--color-cream); font-size: 1.5rem; margin-bottom: 1rem;">Железнодорожный вокзал Алма-Ата 2</h3>
+            <p id="routeDesc" style="color: var(--color-gray); margin-bottom: 1.5rem; font-size: 1.05rem;">Сюда непрерывно прибывали эшелоны с эвакуированными заводами, ранеными бойцами и беженцами.</p>
+        </div>
+        
+        <div class="route-controls">
+            <button class="btn" onclick="prevRouteStep()" style="background: var(--bg-card); border: 1px solid var(--border-color); opacity: 1; animation: none;">← Назад</button>
+            <button class="btn" onclick="nextRouteStep()" style="opacity: 1; animation: none;">Следующая точка →</button>
+        </div>
+    </div>
+</section>
+
+<section id="people" class="reveal">
+    <h2 class="section-title">Истории людей</h2>
+    <p class="section-desc">Судьбы реальных жителей и эвакуированных в Алматы.</p>
+    <div class="cards-grid">
+        <div class="card stagger-item">
+            <span class="archive-stamp">ЛИЧНОЕ ДЕЛО</span>
+            <h3>Владимир Вернадский</h3>
+            <p style="color: var(--color-gray); font-size: 0.9rem; margin-bottom: 1rem;">Академик, эвакуирован в Казахстан. Изучал природные ресурсы для фронта.</p>
+        </div>
+        <div class="card stagger-item">
+            <span class="archive-stamp">ЛИЧНОЕ ДЕЛО</span>
+            <h3>Маншук Маметова</h3>
+            <p style="color: var(--color-gray); font-size: 0.9rem; margin-bottom: 1rem;">Студентка из Алматы, доброволец, пулеметчица, Герой Советского Союза.</p>
+        </div>
+        <div class="card stagger-item">
+            <span class="archive-stamp">ЛИЧНОЕ ДЕЛО</span>
+            <h3>Сергей Эйзенштейн</h3>
+            <p style="color: var(--color-gray); font-size: 0.9rem; margin-bottom: 1rem;">Знаменитый кинорежиссер, работавший в эвакуации над картиной «Иван Грозный».</p>
+        </div>
+    </div>
+</section>
+
+<section id="comparison" class="reveal-zoom">
+    <h2 class="section-title">Тогда → Сейчас</h2>
+    <p class="section-desc">Передвигайте ползунок, чтобы сравнить Алматы 1940-х с современным городом.</p>
+    
+    <div class="comparison-container" id="compContainer">
+        <div class="comparison-img img-then"></div>
+        <div class="comparison-img img-now" id="nowLayer"></div>
+        <div class="slider-handle-line" id="sliderLine" style="left: 50%;">
+            <div class="slider-knob">↔</div>
+        </div>
+        <input type="range" min="0" max="100" value="50" class="slider-range" id="sliderRange" oninput="slideCompare(this.value)">
+    </div>
+</section>
+
+<section id="stats" class="reveal">
+    <h2 class="section-title">Алматы в цифрах</h2>
+    <p class="section-desc">Масштаб вклада тылового города в победу.</p>
+    <div class="stats-grid">
+        <div class="stat-card stagger-item">
+            <div class="stat-number glitch" data-target="30" data-suffix="+">0</div>
+            <p style="color: var(--color-gray); font-size: 0.9rem;">Эвакуированных предприятий</p>
+        </div>
+        <div class="stat-card stagger-item">
+            <div class="stat-number glitch" data-target="34" data-suffix="">0</div>
+            <p style="color: var(--color-gray); font-size: 0.9rem;">Военных госпиталя</p>
+        </div>
+        <div class="stat-card stagger-item">
+            <div class="stat-number glitch" data-target="70" data-suffix="К+">0</div>
+            <p style="color: var(--color-gray); font-size: 0.9rem;">Раненых на излечении</p>
+        </div>
+        <div class="stat-card stagger-item">
+            <div class="stat-number glitch" data-target="1945" data-suffix="">0</div>
+            <p style="color: var(--color-gray); font-size: 0.9rem;">Год Победы</p>
+        </div>
+    </div>
+</section>
+
+<section id="sources" class="reveal">
+    <h2 class="section-title">Архивные источники</h2>
+    <p class="section-desc">Документы и книги, использованные в исследовании.</p>
+    <div class="cards-grid">
+        <div class="card stagger-item">
+            <span class="archive-stamp">АРХИВ №1</span>
+            <h3>Государственный архив г. Алматы</h3>
+            <p style="color: var(--color-gray); font-size: 0.9rem;">Фонд постановлений горисполкома военного времени.</p>
+        </div>
+        <div class="card stagger-item">
+            <span class="archive-stamp">АРХИВ №2</span>
+            <h3>Музей истории города Алматы</h3>
+            <p style="color: var(--color-gray); font-size: 0.9rem;">Фотоматериалы, личные вещи бойцов и трудовых коллективов.</p>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <p>© 2026 Проект «Следы Великой Отечественной войны на карте Алматы». Исторический архив и интерактивное исследование.</p>
+</footer>
+
+<script>
+/* ===== ПРОГРЕСС-БАР СКРОЛЛА ===== */
+window.addEventListener('scroll', () => {
+    const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    const scrolled = (winScroll / height) * 100;
+    document.getElementById('scrollProgress').style.width = scrolled + '%';
+});
+
+/* ===== ПАДАЮЩИЕ ЧАСТИЦЫ ===== */
+function createParticles() {
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 50; i++) {
+        const particle = document.createElement('div');
+        particle.classList.add('particle');
+        const size = Math.random() * 4 + 1;
+        const left = Math.random() * 100;
+        const duration = Math.random() * 10 + 8;
+        const delay = Math.random() * 10;
+        const opacity = Math.random() * 0.5 + 0.2;
+        particle.style.width = size + 'px';
+        particle.style.height = size + 'px';
+        particle.style.left = left + '%';
+        particle.style.opacity = opacity;
+        particle.style.animationDuration = duration + 's';
+        particle.style.animationDelay = delay + 's';
+        container.appendChild(particle);
+    }
+}
+createParticles();
+
+/* ===== ПЕЧАТАЮЩИЙСЯ ТЕКСТ ===== */
+const typewriterText = "Алматы в 1941–1945 годах: эвакуированные предприятия, госпитали, судьбы людей и места памяти тылового города.";
+let charIndex = 0;
+
+function typeText() {
+    const element = document.getElementById('typewriter');
+    if (charIndex < typewriterText.length) {
+        element.textContent += typewriterText.charAt(charIndex);
+        charIndex++;
+        setTimeout(typeText, 40);
+    }
+}
+setTimeout(typeText, 800);
+
+/* ===== SCROLL REVEAL ===== */
+document.addEventListener("DOMContentLoaded", () => {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('active');
+                const staggerItems = entry.target.querySelectorAll('.stagger-item');
+                staggerItems.forEach((item, index) => {
+                    setTimeout(() => {
+                        item.classList.add('active');
+                    }, index * 150);
+                });
+                if (entry.target.id === 'stats') {
+                    animateCounters();
+                }
+            }
+        });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-zoom').forEach(s => observer.observe(s));
+});
+
+/* ===== СЧЁТЧИКИ ===== */
+function animateCounters() {
+    const counters = document.querySelectorAll('.stat-number[data-target]');
+    counters.forEach(counter => {
+        const target = parseInt(counter.getAttribute('data-target'));
+        const suffix = counter.getAttribute('data-suffix');
+        const duration = 2000;
+        const startTime = performance.now();
+        
+        function updateCounter(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const current = Math.floor(easeOut * target);
+            counter.textContent = current + suffix;
+            if (progress < 1) {
+                requestAnimationFrame(updateCounter);
+            } else {
+                counter.textContent = target + suffix;
+            }
+        }
+        requestAnimationFrame(updateCounter);
+    });
+}
+
+/* ===== 3D-НАКЛОН КАРТОЧЕК ===== */
+document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const rotateX = (y - centerY) / 25;
+        const rotateY = (centerX - x) / 25;
+        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-5px)`;
+    });
+    
+    card.addEventListener('mouseleave', () => {
+        card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateY(0)';
+    });
+});
+
+/* ===== ДАННЫЕ КАРТЫ ===== */
+const pointData = {
+    1: { title: "Эвакуированный завод им. Кирова", coords: "43.2671° N, 76.9123° E", stamp: "ОБЪЕКТ №011 · ПРЕДПРИЯТИЕ", desc: "Сюда было перебазировано оборудование машиностроительного завода с западных рубежей. Выпускал продукцию для фронта круглосуточно силами женщин и подростков.", today: "Сейчас на этом месте промышленный комплекс и современные жилые кварталы.", img: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80" },
+    2: { title: "Эвакогоспиталь №1235", coords: "43.2450° N, 76.9450° E", stamp: "ОБЪЕКТ №024 · ГОСПИТАЛЬ", desc: "Размещался в здании одной из центральных школ Алматы. Тысячи раненых бойцов прошли через хирургическую реабилитацию в этом месте.", today: "Сегодня здесь функционирует общеобразовательная школа города.", img: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=600&q=80" },
+    3: { title: "Квартал эвакуированной интеллигенции", coords: "43.2550° N, 76.9300° E", stamp: "ОБЪЕКТ №042 · ЛЮДИ", desc: "Здесь проживали эвакуированные ученые, писатели, художники и кинематографисты (включая Сергея Эйзенштейна и академика Вернадского).", today: "Исторический центр старого Алматы, памятники архитектуры.", img: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80" },
+    4: { title: "Мемориал тыловому Алматы", coords: "43.2300° N, 76.9500° E", stamp: "ОБЪЕКТ №099 · ПАМЯТЬ", desc: "Памятное место, посвященное подвигу алматинцев, которые ковали Победу в глубоком тылу, отдавая все силы фронту.", today: "Мемориальный парк и аллея памяти.", img: "https://images.unsplash.com/photo-1569000155364-e22c2b3e8e7a?auto=format&fit=crop&w=600&q=80" },
+    5: { title: "Эвакуированная фабрика текстиля", coords: "43.2750° N, 76.9600° E", stamp: "ОБЪЕКТ №055 · ПРЕДПРИЯТИЕ", desc: "Выпуск тканей для обмундирования советских солдат. Работали в три смены без выходных.", today: "Современный бизнес-центр и складские терминалы.", img: "https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=600&q=80" },
+    6: { title: "Республиканский эвакуационный пункт", coords: "43.2200° N, 76.9100° E", stamp: "ОБЪЕКТ №078 · ГОСПИТАЛЬ", desc: "Сортировочный медицинский пункт, распределявший прибывающих раненых по госпиталям столицы советского Казахстана.", today: "Жилой микрорайон.", img: "https://images.unsplash.com/photo-1519494026892-80e9034610b0?auto=format&fit=crop&w=600&q=80" }
+};
+
+function showPointInfo(id) {
+    const item = pointData[id];
+    if (!item) return;
+    const card = document.getElementById('infoCard');
+    card.classList.remove('flash');
+    void card.offsetWidth;
+    card.classList.add('flash');
+    card.classList.remove('fade-content');
+    void card.offsetWidth;
+    card.classList.add('fade-content');
+    document.getElementById('cardTitle').innerText = item.title;
+    document.getElementById('cardCoords').innerText = item.coords;
+    document.getElementById('cardStamp').innerText = item.stamp;
+    document.getElementById('cardDesc').innerText = item.desc;
+    document.getElementById('cardToday').innerHTML = `<strong>Сегодня на этом месте:</strong> ${item.today}`;
+    document.getElementById('cardImg').src = item.img;
+}
+
+function filterMap(category, btnElement) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btnElement.classList.add('active');
+    const points = document.querySelectorAll('.map-point');
+    points.forEach(point => {
+        if (category === 'all' || point.getAttribute('data-category') === category) {
+            point.style.display = 'block';
+            point.style.animation = 'pointAppear 0.5s';
+        } else {
+            point.style.display = 'none';
+        }
+    });
+}
+
+/* ===== ТАЙМЛАЙН ===== */
+const yearData = {
+    1941: { stamp: "ХРОНИКА 1941 ГОДА", title: "Первые эшелоны с Запада", desc: "В Алматы прибывают первые эвакуированные заводы, фабрики и тысячи специалистов. Город принимает эвакуированных ленинградцев, москвичей и украинцев. Разворачиваются первые госпитали." },
+    1942: { stamp: "ХРОНИКА 1942 ГОДА", title: "Пик эвакуации и перестройки тыла", desc: "Массовый запуск эвакуированных заводов на полную мощность. Открытие десятков новых госпиталей. Алматы становится одним из ключевых культурных и научно-производственных центров страны." },
+    1943: { stamp: "ХРОНИКА 1943 ГОДА", title: "Всё для фронта, всё для победы", desc: "Бесперебойный выпуск военной продукции, боеприпасов, обмундирования. Научные институты под руководством Академии наук СССР разрабатывают новые технологии для фронта." },
+    1944: { stamp: "ХРОНИКА 1944 ГОДА", title: "Наращивание мощностей", desc: "Наряду с военной продукцией начинается постепенное восстановление и выпуск товаров народного потребления. Укрепление тыловой базы." },
+    1945: { stamp: "ХРОНИКА 1945 ГОДА", title: "Долгожданная Победа", desc: "Подведение итогов тылового подвига Алматы. Встреча героев-победителей, возвращение эвакуированных коллективов на родину и увековечение памяти павших." }
+};
+
+function setYear(year, element) {
+    document.querySelectorAll('.year-node').forEach(n => n.classList.remove('active'));
+    element.classList.add('active');
+    const data = yearData[year];
+    const content = document.getElementById('yearContent');
+    content.classList.remove('fade-content');
+    void content.offsetWidth;
+    content.classList.add('fade-content');
+    content.innerHTML = `
+        <span class="archive-stamp">${data.stamp}</span>
+        <h3 style="color: var(--color-cream); margin-bottom: 0.5rem;">${data.title}</h3>
+        <p style="color: var(--color-gray);">${data.desc}</p>
+    `;
+}
+
+/* ===== МАРШРУТ ===== */
+const routeSteps = [
+    { stamp: "ОСТАНОВКА №1 · ПРИБЫТИЕ", title: "Железнодорожный вокзал Алма-Ата 2", desc: "Сюда непрерывно прибывали эшелоны с эвакуированными заводами, ранеными бойцами и беженцами со всего западного фронта. На перроне круглосуточно дежурили волонтеры и врачи." },
+    { stamp: "ОСТАНОВКА №2 · ЛЕЧЕНИЕ", title: "Эвакуационный госпиталь №1235", desc: "Следующая точка маршрута — здания школ и общественных учреждений, переоборудованные под госпитали для возвращения раненых солдат в строй." },
+    { stamp: "ОСТАНОВКА №3 · ПРОИЗВОДСТВО", title: "Эвакуированное предприятие", desc: "Заводы, развернутые в стенах алматинских артелей и новых цехов, выпускающие снаряды, обмундирование и детали для фронта." },
+    { stamp: "ОСТАНОВКА №4 · БЫТ И ЖИЗНЬ", title: "Жилые кварталы и уплотнение", desc: "Как жили алматинцы: прием эвакуированных семей в каждый дом, карточная система снабжения и работа в тылу на износ." },
+    { stamp: "ОСТАНОВКА №5 · ПАМЯТЬ", title: "Мемориальные места памяти", desc: "Памятники и обелиски, сохранившие память о героизме тылового Алматы и подвиге его жителей в 1941–1945 годах." }
+];
+
+let currentRouteIndex = 0;
+
+function nextRouteStep() {
+    currentRouteIndex = (currentRouteIndex + 1) % routeSteps.length;
+    updateRouteView();
+}
+
+function prevRouteStep() {
+    currentRouteIndex = (currentRouteIndex - 1 + routeSteps.length) % routeSteps.length;
+    updateRouteView();
+}
+
+function updateRouteView() {
+    const step = routeSteps[currentRouteIndex];
+    const block = document.getElementById('routeContentBlock');
+    block.classList.remove('fade-content');
+    void block.offsetWidth;
+    block.classList.add('fade-content');
+    document.getElementById('routeStamp').innerText = step.stamp;
+    document.getElementById('routeTitle').innerText = step.title;
+    document.getElementById('routeDesc').innerText = step.desc;
+    for (let i = 1; i <= 5; i++) {
+        const el = document.getElementById(`st${i}`);
+        if (i <= currentRouteIndex + 1) el.classList.add('active-step');
+        else el.classList.remove('active-step');
+    }
+}
+
+/* ===== СЛАЙДЕР ТОГДА/СЕЙЧАС ===== */
+function slideCompare(val) {
+    document.getElementById('nowLayer').style.width = val + '%';
+    document.getElementById('sliderLine').style.left = val + '%';
+}
+</script>
+
+</body>
+</html>
